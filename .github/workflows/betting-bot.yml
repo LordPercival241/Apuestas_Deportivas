@@ -1,0 +1,73 @@
+name: Betting Bot Scheduler
+
+on:
+  schedule:
+    # Ejecutar cada 6 horas
+    - cron: '0 */6 * * *'
+  
+  # También permitir ejecución manual
+  workflow_dispatch:
+
+jobs:
+  run-betting-bot:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Configure environment
+      env:
+        SPORTRADAR_API_KEY: ${{ secrets.SPORTRADAR_API_KEY }}
+        BETFAIR_USERNAME: ${{ secrets.BETFAIR_USERNAME }}
+        BETFAIR_PASSWORD: ${{ secrets.BETFAIR_PASSWORD }}
+        BETFAIR_APP_KEY: ${{ secrets.BETFAIR_APP_KEY }}
+        DB_HOST: ${{ secrets.DB_HOST }}
+        DB_PORT: ${{ secrets.DB_PORT }}
+        DB_NAME: ${{ secrets.DB_NAME }}
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        ENVIRONMENT: production
+        PAPER_TRADING: ${{ secrets.PAPER_TRADING || 'True' }}
+        LIVE_TRADING: ${{ secrets.LIVE_TRADING || 'False' }}
+      run: |
+        echo "Environment configured"
+        python -c "from config import current_config; print(f'Config loaded: {current_config.__name__}')"
+    
+    - name: Run betting bot
+      env:
+        SPORTRADAR_API_KEY: ${{ secrets.SPORTRADAR_API_KEY }}
+        BETFAIR_USERNAME: ${{ secrets.BETFAIR_USERNAME }}
+        BETFAIR_PASSWORD: ${{ secrets.BETFAIR_PASSWORD }}
+        BETFAIR_APP_KEY: ${{ secrets.BETFAIR_APP_KEY }}
+        DB_HOST: ${{ secrets.DB_HOST }}
+        DB_PORT: ${{ secrets.DB_PORT }}
+        DB_NAME: ${{ secrets.DB_NAME }}
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        PAPER_TRADING: ${{ secrets.PAPER_TRADING || 'True' }}
+        LIVE_TRADING: ${{ secrets.LIVE_TRADING || 'False' }}
+      run: |
+        python main.py
+    
+    - name: Run tests
+      if: always()
+      run: |
+        python -m pytest tests/ -v --tb=short
+    
+    - name: Upload logs
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: execution-logs
+        path: logs/
+        retention-days: 30
